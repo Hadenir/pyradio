@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='css/materialize.min.css') }}"  media="screen,projection"/>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>Hadenir's Radio</title>
+    </head>
+    <body>
+        <nav class="light-green lighten-1" role="navigation">
+            <div class="nav-wrapper container">
+                <a id="logo-container" href="/" class="brand-logo">Hadenir's Radio</a>
+            </div>
+        </nav>
+
+        <div class="section" id="index-banner">
+            <div class="container">
+                <div class="row center">
+                    <h4 class="header col s12 light">Now playing...</h4>
+                </div>
+                {% if current_station %}
+                    <h2 class="header center light-blue-text">{{ current_station.name }}</h2>
+                {% else %}
+                    <h4 class="header center grey-text" style="font-style: italic">Pick a station to play</h1>
+                {% endif %}
+
+                {% if playing %}
+                    <div class="progress">
+                        <div class="indeterminate light-green"></div>
+                    </div>
+                {% else %}
+                    <div class="progress">
+                        <div class="determinate light-green"></div>
+                    </div>
+                {% endif %}
+                <br>
+                <div class="row center valign-wrapper">
+                    <div class="col s5">
+                        <a href="/prev-station" class="btn-floating right light-green"><i class="material-icons">skip_previous</i></a>
+                    </div>
+                    {% if playing %}
+                        <div class="col s2" style="min-width: 160px;">
+                            <a href="/pause" id="pause-button" class="btn-large waves-effect waves-light orange">
+                                <i class="material-icons left">pause</i>
+                                Pause
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="col s2" style="min-width: 160px;">
+                            <a href="/play" id="play-button" class="btn-large waves-effect waves-light light-green">
+                                <i class="material-icons left">play_arrow</i>
+                                Play
+                            </a>
+                        </div>
+                    {% endif %}
+                    <div class="col s5">
+                        <a href="/next-station" class="btn-floating left light-green"><i class="material-icons">skip_next</i></a>
+                    </div>
+                </div>
+                <br>
+                <div class="container">
+                    <div class="range-field">
+                        <input type="range" min="0" max="100" id="volume-range" onchange="updateVolume(this.value)"/>
+                    </div>
+                    <div class="center">
+                        <span class="grey-text">Volume</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section" id="stations-list">
+            <div class="container col s12">
+                <ul class="collection with-header">
+                    <li class="collection-header">
+                        <h4 style="display: inline;">Saved radio stations</h4>
+                        <a href="#add-station-modal" class="right btn-floating waves-effect modal-trigger"><i class="material-icons">add</i></a>
+                    </li>
+                    {% for station in stations %}
+                    <li class="collection-item">
+                        <div>
+                            {% if loop.index - 1 == current_station_id %}
+                            <b>{{ station.name }}</b>
+                            {% else %}
+                            {{ station.name }}
+                            {% endif %}
+                            <div class="secondary-content">
+                                <a href="/select-station/{{ loop.index - 1 }}" class="waves-effect"><i class="material-icons">headphones</i></a>
+                                <a href="#" class="waves-effect" onclick="editStation({{ loop.index - 1 }})"><i class="material-icons">edit</i></a>
+                                <a href="/remove-station/{{ loop.index - 1 }}" class="waves-effect"><i class="material-icons">delete</i></a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div id="add-station-modal" class="modal">
+            <div class="modal-content">
+                <h4>Add new station</h4>
+                <br>
+                <div class="container">
+                    <form class="column" id="add-station-form" action="/add-station" method="post">
+                        <div class="input-field col s12">
+                            <i class="material-icons prefix">radio</i>
+                            <input id="station-name" name="station-name" type="text" class="validate" required/>
+                            <label for="station-name">Station name</label>
+                        </div>
+                        <div class="input-field col s12">
+                            <i class="material-icons prefix">link</i>
+                            <input id="station-url" name="station-url" type="text" class="validate" required
+                                pattern="(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"/>
+                            <label for="station-url">Url</label>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#!" class="waves-effect btn-flat waves-light grey-text modal-close">Cancel</a>
+                <a href="#!" class="waves-effect btn-flat waves-light" id="add-station-submit">Add station</a>
+            </div>
+        </div>
+
+        <div id="edit-station-modal" class="modal">
+            <div class="modal-content">
+                <h4>Add new station</h4>
+                <br>
+                <div class="container">
+                    <form class="column" id="edit-station-form" method="post">
+                        <div class="input-field col s12">
+                            <i class="material-icons prefix">radio</i>
+                            <input id="station-name" name="station-name" type="text" class="validate" required/>
+                            <label for="station-name">Station name</label>
+                        </div>
+                        <div class="input-field col s12">
+                            <i class="material-icons prefix">link</i>
+                            <input id="station-url" name="station-url" type="text" class="validate" required
+                                pattern="(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"/>
+                            <label for="station-url">Url</label>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#!" class="waves-effect btn-flat waves-light grey-text modal-close">Cancel</a>
+                <a href="#!" class="waves-effect btn-flat waves-light" id="edit-station-submit">Edit station</a>
+            </div>
+        </div>
+
+        <script type="text/javascript" src="{{ url_for('static', filename='js/materialize.min.js') }}"></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
+        <script>
+            M.AutoInit();
+
+            document.getElementById("add-station-submit").onclick = function() {
+                form = document.getElementById("add-station-form");
+                if(form.checkValidity()) {
+                    form.submit();
+                }
+            }
+
+            document.getElementById("edit-station-submit").onclick = function() {
+                form = document.getElementById("edit-station-form");
+                if(form.checkValidity()) {
+                    form.submit();
+                }
+            }
+
+            async function editStation(id) {
+                response = await fetch(`/station/${id}`);
+                if(!response.ok) {
+                    return;
+                }
+
+                json = await response.json();
+
+                modal = document.getElementById("edit-station-modal");
+                form = document.getElementById("edit-station-form");
+
+                var modal_instance = M.Modal.getInstance(modal);
+                form.action = `/edit-station/${id}`
+
+                name_input = form.querySelector("#station-name");
+                url_input = form.querySelector("#station-url");
+
+                name_input.value = json.station_name;
+                url_input.value = json.station_url;
+                M.updateTextFields();
+
+                modal_instance.open();
+            }
+
+            async function updateVolume(value) {
+                await fetch(`/set-volume/${value}`);
+            }
+
+            fetch("/get-volume")
+                .then(response => response.json()
+                    .then(json => document.getElementById("volume-range").value = json.volume));
+        </script>
+    </body>
+</html>
